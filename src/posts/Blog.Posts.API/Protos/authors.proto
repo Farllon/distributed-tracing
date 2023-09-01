@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package authors;
+
+service AuthorsRpc {
+	rpc GetById (GetByIdRequest) returns (GetByIdreply);
+}
+
+message GetByIdRequest {
+	string id = 1;
+}
+
+message GetByIdreply {
+	string id = 1;
+	string name = 2;
+}

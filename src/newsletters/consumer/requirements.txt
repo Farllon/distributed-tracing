@@ -1,0 +1,5 @@
+pika==1.3.2
+psycopg2-binary==2.9.1
+opentelemetry-instrumentation-pika==0.40b0
+opentelemetry-instrumentation-psycopg2==0.40b0
+opentelemetry-exporter-otlp-proto-grpc==1.19.0

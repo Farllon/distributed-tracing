@@ -1,0 +1,65 @@
+version: '3.4'
+
+services:
+  blog.authors.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AuthorsDb=Host=postgres;Port=5432;Database=authorsDb;Username=postgres;Password=postgressql
+      - Tempo__Url=http://tempo:4317
+      - Tempo__ExportProtocol=0
+      - Serilog__WriteTo__0__Args__uri=http://loki:3100
+    ports:
+      - 5000:80
+
+  blog.authors.grpc:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AuthorsDb=Host=postgres;Port=5432;Database=authorsDb;Username=postgres;Password=postgressql
+      - Tempo__Url=http://tempo:4317
+      - Tempo__ExportProtocol=0
+      - Serilog__WriteTo__0__Args__uri=http://loki:3100
+    ports:
+      - 8000:8000
+
+  blog.posts.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MongoDb__ConnectionString=mongodb://root:example@mongo:27017/admin
+      - MongoDb__Database=postsapp
+      - AuthorsRPC=http://blog.authors.grpc:8000
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__HostName=rabbitmq
+      - Tempo__Url=http://tempo:4317
+      - Tempo__ExportProtocol=0
+      - Serilog__WriteTo__0__Args__uri=http://loki:3100
+    ports:
+      - 5002:80
+
+  blog.newsletters.api:
+    ports:
+      - 5003:5000
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgressql
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=newsletters
+
+  blog.newsletters.consumer:
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgressql
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=newsletters
+      - SMTP_SERVER=a
+      - SMTP_PORT=a
+      - SMTP_USERNAME=a
+      - SMTP_PASSWORD=a
+      - SMTP_SENDER=a
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_POST_CREATED_EXHANGE=exchange.topic.post-created 
+      - TEMPO_URL=http://tempo:4317
+

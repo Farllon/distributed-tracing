@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "serviceActions": {
+        "blog.authors.api": "StartDebugging",
+        "blog.authors.grpc": "StartDebugging",
+        "blog.posts.api": "StartDebugging"
+      }
+    }
+  }
+}

@@ -1,0 +1,225 @@
+version: "3.4"
+
+services:
+  blog.authors.api:
+    hostname: authorsapi
+    image: ${DOCKER_REGISTRY-}blogauthorsapi
+    build:
+      context: .
+      dockerfile: src/authors/Blog.Authors.API/Dockerfile
+    networks:
+      - application
+    depends_on:
+      postgres:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+
+  blog.authors.grpc:
+    hostname: authorsgrpc
+    image: ${DOCKER_REGISTRY-}blogauthorsgrpc
+    build:
+      context: .
+      dockerfile: src/authors/Blog.Authors.gRPC/Dockerfile
+    networks:
+      - application
+    depends_on:
+      postgres:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+
+  blog.posts.api:
+    hostname: postsapi
+    image: ${DOCKER_REGISTRY-}blogpostsapi
+    build:
+      context: .
+      dockerfile: src/posts/Blog.Posts.API/Dockerfile
+    networks:
+      - application
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+
+  blog.newsletters.api:
+    hostname: newslettersapi
+    image: ${DOCKER_REGISTR-}blognewslettersapi
+    build:
+      context: .
+      dockerfile: src/newsletters/api/Dockerfile
+    networks:
+      - application
+    depends_on:
+      postgres:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+
+  blog.newsletters.consumer:
+    image: ${DOCKER_REGISTR-}blognewslettersconsumer
+    build:
+      context: .
+      dockerfile: src/newsletters/consumer/Dockerfile
+    networks:
+      - application
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+
+  postgres:
+    hostname: postgres
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgressql
+    networks:
+      - application
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "db_prod"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - application
+
+  mongo:
+    image: mongo
+    hostname: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - 27017:27017
+    networks:
+      - application
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  mongo-express:
+    image: mongo-express
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/admin
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - application
+    
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    hostname: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - application
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes: 
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    privileged: true
+    environment:
+      - PROMETHEUS_COMMON_ENABLE_HTTP2=1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    networks:
+      - application
+
+  loki:
+    hostname: loki
+    image: grafana/loki:2.8.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - application
+    healthcheck:
+      test: wget -q --tries=1 -O- http://localhost:3100/ready
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  promtail:
+    image: grafana/promtail:2.8.0
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - application
+  
+  tempo:
+    hostname: tempo
+    image: grafana/tempo:latest
+    command: -config.file=/etc/tempo.yaml
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "14268:14268"  # jaeger ingest
+      - "3200:3200"   # tempo
+      - "9095:9095" # tempo grpc
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+      - "9411:9411"   # zipkin
+    networks:
+      - application
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - DS_PROMETHEUS=prometheus
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes: 
+      - "./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml"
+    privileged: true
+    networks:
+      - application
+    depends_on:
+      loki:
+        condition: service_healthy
+
+networks:
+  application:
+    driver: bridge

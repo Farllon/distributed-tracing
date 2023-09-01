@@ -1,0 +1,130 @@
+﻿@page "/authors"
+@using BlazorApp1.Clients;
+@using BlazorApp1.Models;
+@inject AuthorsClient Http
+
+<div class="col-12 col-sm-12 col-md-12 col-lg-8 col-xl-8">
+    <div class="row">
+        <div class="col"><h3>Authors</h3></div>
+        <div class="col">
+            <button type="button" class="btn btn-info float-right" @onclick="ShowCreate">Create</button>
+        </div>
+    </div>
+    <div class="row">
+        @if (Authors1.Any())
+        {
+            @foreach (var author in Authors1)
+            {
+                <div class="col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 mh-25 mb-4">
+                    <div class="card @(SelectedAuthor?.Id == author.Id ? "bg-light" : "")">
+                        <div class="card-body">
+                            <h5 class="card-title">#@author.Id</h5>
+                            <p class="card-text">@(@author.Name.Length <= 80 ? author.Name : author.Name.Substring(0, 80) + "...")</p>
+                            <a href="/authors" @onclick="() => GetDetails(author.Id)">More...</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p>No authors available</p>
+        }
+    </div>
+</div>
+<div class="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
+    @if (SelectedAuthor is not null)
+    {
+        <EditForm class="container" Model="SelectedAuthor" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="form-group">
+                <label for="title">Title</label>
+                <InputText id="title" @bind-Value="SelectedAuthor.Name" placeholder="Author name..." class="form-control" />
+            </div>
+            <div class="row">
+                <div class="col">
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+                @if (!IsCreating)
+                {
+                    <div class="col">
+                        <button type="button" @onclick="DeleteAuthor" class="btn btn-danger float-right">Delete</button>
+                    </div>
+                }
+            </div>
+        </EditForm>
+    }
+    else
+    {
+        <p>No author selected</p>
+    }
+</div>
+@code {
+    private List<Author> Authors1 = new();
+    private Author SelectedAuthor;
+    private bool IsCreating;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Authors1 = await GetAuthors();
+    }
+
+    private async Task GetDetails(Guid id)
+    {
+        SelectedAuthor = new();
+        SelectedAuthor = await Http.GetDetailsAsync(id);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        Author response;
+
+        if (IsCreating)
+        {
+            response = await Http.CreateAsync(SelectedAuthor);
+        }
+        else
+        {
+            response = await Http.UpdateAsync(SelectedAuthor);
+        }
+
+        if (response is not null)
+        {
+            if (IsCreating)
+            {
+                Authors1.Add(response);
+                IsCreating = false;
+            }
+            else
+            {
+                var idx = Authors1.FindIndex(a => a.Id == SelectedAuthor.Id);
+
+                Authors1[idx] = response;
+            }
+
+            SelectedAuthor = response;
+        }
+    }
+
+    private async Task DeleteAuthor()
+    {
+        var deleted = await Http.DeleteAsync(SelectedAuthor);
+
+        if (deleted)
+            Authors1.Remove(SelectedAuthor);
+
+        SelectedAuthor = null;
+    }
+
+    private async Task<List<Author>> GetAuthors()
+    {
+        return await Http.GetAllAsync();
+    }
+
+    private void ShowCreate()
+    {
+        SelectedAuthor = new();
+        IsCreating = true;
+    }
+}

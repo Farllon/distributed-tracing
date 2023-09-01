@@ -1,0 +1,46 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@hostname=localhost
+@port=5002
+@host={{hostname}}:{{port}}
+@url=http://{{host}}
+@contentType=application/json
+@authorId="424b85f0-ab13-4390-943b-d07516b14a06"
+@postId=asd
+
+###
+
+GET {{url}}/posts
+
+###
+
+POST {{url}}/posts
+Content-Type: {{contentType}}
+
+{
+    "title": "Fisrt Post",
+    "content": "This is my first post",
+    "authorId": {{authorId}}
+}
+
+###
+
+GET {{url}}/posts/{{postId}}
+
+###
+
+GET {{url}}/posts/be548e7b-6517-4a8f-97be-473bf835e04d
+
+###
+
+PUT {{url}}/posts/{{postId}}
+Content-Type: {{contentType}}
+
+{
+    "title": "Fisrt Post",
+    "content": "This is my first post with changes",
+    "authorId": {{authorId}}
+}
+
+###
+
+DELETE {{url}}/posts/{{postId}}

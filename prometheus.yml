@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s #Scrape interval to every 15 seconds.
+  evaluation_interval: 15s #Evaluate rules every 15 seconds.
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+  - job_name: 'authorsapi'
+    enable_http2: false
+    static_configs:
+      - targets: [ 'host.docker.internal:5000' ]
+  - job_name: 'authorsgrpc'
+    static_configs:
+      - targets: [ 'host.docker.internal:8000' ]
+  - job_name: 'postsapi'
+    enable_http2: false
+    static_configs:
+      - targets: [ 'host.docker.internal:5002' ]
+  - job_name: 'tempo'
+    static_configs:
+      - targets: [ 'tempo:3200' ]

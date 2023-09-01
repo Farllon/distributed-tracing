@@ -1,0 +1,148 @@
+﻿@page "/posts"
+@using BlazorApp1.Clients;
+@using BlazorApp1.Models;
+@inject PostsClient Http
+@inject AuthorsClient AuthorClient
+
+<div class="col-12 col-sm-12 col-md-12 col-lg-8 col-xl-8">
+    <div class="row">
+        <div class="col"><h3>Posts</h3></div>
+        <div class="col">
+            <button type="button" class="btn btn-info float-right" @onclick="ShowCreate">Create</button>
+        </div>
+    </div>
+    <div class="row">
+        @if (Posts1.Any())
+        {
+            @foreach (var post in Posts1)
+            {
+                <div class="col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 mh-25 mb-4">
+                    <div class="card @(SelectedPost?.Id == post.Id ? "bg-light" : "")">
+                        <div class="card-body">
+                            <h5 class="card-title">@post.Title</h5>
+                            <p class="card-text">@(@post.Content.Length <= 80 ? post.Content : post.Content.Substring(0, 80) + "...")</p>
+                            <a href="/posts" @onclick="() => GetDetails(post.Id)">More...</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p>No posts available</p>
+        }
+    </div>
+</div>
+<div class="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
+    @if (SelectedPost is not null)
+    {
+        <EditForm class="container" Model="SelectedPost" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="form-group">
+                <label for="title">Title</label>
+                <InputText id="title" @bind-Value="SelectedPost.Title" placeholder="Post titile..." class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="content">Content</label>
+                <InputTextArea id="content" @bind-Value="SelectedPost.Content" placeholder="Content..." class="form-control" rows="7" />
+            </div>
+            <div class="form-group">
+                <select @bind="SelectedPost.AuthorId">
+                    @if (Authors1 != null)
+                    {
+                        @foreach (var author in Authors1)
+                        {
+                            <option value="@author.Id">@author.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <button type="submit" disabled="@(SelectedPost.AuthorId == null || SelectedPost.AuthorId == default)" class="btn btn-success">Save</button>
+                </div>
+                @if (!IsCreating)
+                {
+                    <div class="col">
+                        <button type="button" @onclick="DeletePost" class="btn btn-danger float-right">Delete</button>
+                    </div>
+                }
+            </div>
+        </EditForm>
+    }
+    else
+    {
+        <p>No post selected</p>
+    }
+</div>
+@code {
+    private List<Post> Posts1 = new();
+    private Post SelectedPost;
+    private bool IsCreating;
+    private List<Author> Authors1 = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Posts1 = await GetPosts();
+        Authors1 = await AuthorClient.GetAllAsync();
+    }
+
+    private async Task GetDetails(Guid id)
+    {
+        SelectedPost = new();
+        SelectedPost = await Http.GetDetailsAsync(id);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        Post response;
+
+        if (IsCreating)
+        {
+            response = await Http.CreateAsync(SelectedPost);
+        }
+        else
+        {
+            response = await Http.UpdateAsync(SelectedPost);
+        }
+
+        if (response is not null)
+        {
+            if (IsCreating)
+            {
+                Posts1.Add(response);
+                IsCreating = false;
+            }
+            else
+            {
+                var idx = Posts1.FindIndex(a => a.Id == SelectedPost.Id);
+
+                Posts1[idx] = response;
+            }
+
+            SelectedPost = response;
+        }
+    }
+
+    private async Task DeletePost()
+    {
+        var deleted = await Http.DeleteAsync(SelectedPost);
+
+        if (deleted)
+            Posts1.Remove(SelectedPost);
+
+        SelectedPost = null;
+    }
+
+    private async Task<List<Post>> GetPosts()
+    {
+        return await Http.GetAllAsync();
+    }
+
+    private void ShowCreate()
+    {
+        SelectedPost = new();
+        IsCreating = true;
+    }
+}

@@ -1,0 +1,41 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@hostname=localhost
+@port=5000
+@host={{hostname}}:{{port}}
+@url=http://{{host}}
+@contentType=application/json
+@atuhorId=424b85f0-ab13-4390-943b-d07516b14a06
+
+###
+
+GET {{url}}/authors
+
+###
+
+POST {{url}}/authors
+Content-Type: {{contentType}}
+
+{
+    "name": "Farllon"
+}
+
+###
+
+GET {{url}}/authors/{{atuhorId}}
+
+###
+
+GET {{url}}/authors/be548e7b-6517-4a8f-97be-473bf835e04d
+
+###
+
+PUT {{url}}/authors/{{atuhorId}}
+Content-Type: {{contentType}}
+
+{
+    "name": "Farllon 2"
+}
+
+###
+
+DELETE {{url}}/authors/{{atuhorId}}
